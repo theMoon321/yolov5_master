@@ -16,7 +16,7 @@ from pathlib import Path
 
 # ---------------------------YSY 4---------------------------
 from models.yolox import DetectX, DetectYoloX
-from models.Detect.MuitlHead import Decoupled_Detect, ASFF_Detect, IDetect, IAuxDetect
+from models.Detect.MultiHead import Decoupled_Detect, ASFF_Detect, IDetect, IAuxDetect
 # ---------------------------YSY 4---------------------------
 
 FILE = Path(__file__).resolve()
