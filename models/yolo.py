@@ -335,7 +335,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 args.insert(2, n)  # number of repeats
                 n = 1
         # YSY: add module research begin-----------------------------
-        elif m in [CARAFE, SPPCSPC, SPPFCSPC, RepConv, BoT3, CA, CBAM, NAMAttention, GAMAttention, Involution, Stem, ResCSPC, ResCSPB, \
+        elif m in [CARAFE, SPPCSPC, SPPFCSPC, RepConv, BoT3, CA, CBAM, Involution, Stem, ResCSPC, ResCSPB, \
                    ResXCSPB, ResXCSPC, BottleneckCSPB, BottleneckCSPC,
                    ASPP, BasicRFB, SPPCSPC_group, HorBlock, CNeB,C3GC ,C3C2, nn.ConvTranspose2d]:
             c1, c2 = ch[f], args[0]
@@ -373,7 +373,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 n = 1
         elif m in [ReOrg, DWT]:
             c2 = ch[f] * 4
-        elif m in [S2Attention, SimSPPF, ACmix, CrissCrossAttention, SOCA, ShuffleAttention, SEAttention, SimAM, SKAttention]:
+        elif m in [SimSPPF, ACmix, ShuffleAttention]:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
