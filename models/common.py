@@ -32,8 +32,64 @@ from utils.general import (LOGGER, ROOT, Profile, check_requirements, check_suff
 from utils.plots import Annotator, colors, save_one_box
 from utils.torch_utils import copy_attr, smart_inference_mode
 
-# ------------------------
+# ------------------------YSY 1------------------------
 from models.Models.research import BoT3
+
+from models.Models.mobileone import MobileOneBlock
+from models.Models.Litemodel import CBH, ES_Bottleneck, DWConvblock, ADD, RepVGGBlock, LC_Block, \
+    Dense, conv_bn_relu_maxpool, Shuffle_Block, stem, MBConvBlock, mobilev3_bneck
+from models.Models.muitlbackbone import conv_bn_hswish, DropPath, MobileNetV3_InvertedResidual, DepthSepConv, \
+    ShuffleNetV2_Model, Conv_maxpool, ConvNeXt, RepLKNet_Stem, RepLKNet_stage1, RepLKNet_stage2, \
+        RepLKNet_stage3, RepLKNet_stage4, CoT3, RegNet1, RegNet2, RegNet3, Efficient1, Efficient2, Efficient3, \
+            MobileNet1,MobileNet2,MobileNet3, C3STR, ConvNextBlock
+
+# ------------------------YSY 1------------------------
+
+# ------------------------YSY 2------------------------
+class MobileOne(nn.Module):
+    # MobileOne
+    def __init__(self, in_channels, out_channels, n, k,
+                 stride=1, dilation=1, padding_mode='zeros', deploy=False, use_se=False):
+        super().__init__()
+        self.m = nn.Sequential(*[MobileOneBlock(in_channels, out_channels, k, stride, deploy) for _ in range(n)])
+
+    def forward(self, x):
+        x = self.m(x)
+        return x
+
+class GhostConv(nn.Module):
+    # Ghost Convolution https://github.com/huawei-noah/ghostnet
+    def __init__(self, c1, c2, k=1, s=1, g=1, act=True):  # ch_in, ch_out, kernel, stride, groups
+        super().__init__()
+        c_ = c2 // 2  # hidden channels
+        self.cv1 = Conv(c1, c_, k, s, None, g, act)
+        self.cv2 = Conv(c_, c_, 5, 1, None, c_, act)
+
+    def forward(self, x):
+        y = self.cv1(x)
+        return torch.cat([y, self.cv2(y)], 1)
+
+class GhostBottleneck(nn.Module):
+    # Ghost Bottleneck https://github.com/huawei-noah/ghostnet
+    def __init__(self, c1, c2, k=3, s=1):  # ch_in, ch_out, kernel, stride
+        super().__init__()
+        c_ = c2 // 2
+        self.conv = nn.Sequential(GhostConv(c1, c_, 1, 1),  # pw
+                                  DWConv(c_, c_, k, s, act=False) if s == 2 else nn.Identity(),  # dw
+                                  GhostConv(c_, c2, 1, 1, act=False))  # pw-linear
+        self.shortcut = nn.Sequential(DWConv(c1, c1, k, s, act=False),
+                                      Conv(c1, c2, 1, 1, act=False)) if s == 2 else nn.Identity()
+
+    def forward(self, x):
+        return self.conv(x) + self.shortcut(x)
+
+class C3Ghost(C3):
+    # C3 module with GhostBottleneck()
+    def __init__(self, c1, c2, n=1, shortcut=True, g=1, e=0.5):
+        super().__init__(c1, c2, n, shortcut, g, e)
+        c_ = int(c2 * e)  # hidden channels
+        self.m = nn.Sequential(*(GhostBottleneck(c_, c_) for _ in range(n)))
+# ------------------------YSY 2------------------------
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
     # Pad to 'same' shape outputs
