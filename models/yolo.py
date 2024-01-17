@@ -383,9 +383,9 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             c1, c2 = ch[f], args[0]
             c2 = make_divisible(c2 * gw, 8)
             args = [c1, c2, n, *args[1:]]
-        elif m is HorNet:
-            c2 = args[0]
-            args = args[1:]
+        # elif m is HorNet:
+        #     c2 = args[0]
+        #     args = args[1:]
         # torchvision
         elif m in [RegNet1, RegNet2, RegNet3, Efficient1, Efficient2, Efficient3,
                   MobileNet1, MobileNet2, MobileNet3]:
