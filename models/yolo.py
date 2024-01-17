@@ -14,6 +14,11 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
+# ---------------------------YSY 4---------------------------
+from models.yolox import DetectX, DetectYoloX
+from models.Detect.MuitlHead import Decoupled_Detect, ASFF_Detect, IDetect, IAuxDetect
+# ---------------------------YSY 4---------------------------
+
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -314,17 +319,99 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
                 args[j] = eval(a) if isinstance(a, str) else a  # eval strings
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
+        # ---------------------------YSY 3---------------------------
+        # ---YSY: new module added after C3x
         if m in {
                 Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
-                BottleneckCSP, C3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x, BoT3}:
+                BottleneckCSP, C3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x,
+                C3HB, C3RFEM, MultiSEAM, SEAM, C3STR, MobileOneBloc}:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
 
             args = [c1, c2, *args[1:]]
-            if m in {BottleneckCSP, C3, C3TR, C3Ghost, C3x, BoT3}:
+            # ---YSY: new module added after C3x
+            if m in {BottleneckCSP, C3, C3TR, C3Ghost, C3x, C3HB, C3RFEM, C3STR}:
                 args.insert(2, n)  # number of repeats
                 n = 1
+        # YSY: add module research begin-----------------------------
+        elif m in [CARAFE, SPPCSPC, SPPFCSPC, RepConv, BoT3, CA, CBAM, NAMAttention, GAMAttention, Involution, Stem, ResCSPC, ResCSPB, \
+                   ResXCSPB, ResXCSPC, BottleneckCSPB, BottleneckCSPC,
+                   ASPP, BasicRFB, SPPCSPC_group, HorBlock, CNeB,C3GC ,C3C2, nn.ConvTranspose2d]:
+            c1, c2 = ch[f], args[0]
+            if c2 != no:  # if not output
+                c2 = make_divisible(c2 * gw, 8)
+
+            args = [c1, c2, *args[1:]]
+            if m in [C3RFEM, SPPCSPC, BoT3, ResCSPC, ResCSPB, ResXCSPB, ResXCSPC, BottleneckCSPB, BottleneckCSPC, \
+                HorBlock, CNeB, C3GC, C3C2]:
+                args.insert(2, n)  # number of repeats
+                n = 1
+            elif m is nn.ConvTranspose2d:
+                if len(args) >= 7:
+                    args[6] = make_divisible(args[6] * gw, 8)
+        elif m in [CBH, ES_Bottleneck, DWConvblock, RepVGGBlock, LC_Block, Dense, conv_bn_relu_maxpool, \
+                   Shuffle_Block, stem, mobilev3_bneck, conv_bn_hswish, MobileNetV3_InvertedResidual, DepthSepConv, \
+                   ShuffleNetV2_Model, Conv_maxpool, CoT3, ConvNextBlock, RepBlock]:
+            c1, c2 = ch[f], args[0]
+            if c2 != no:  # if not output
+                c2 = make_divisible(c2 * gw, 8)
+
+            args = [c1, c2, *args[1:]]
+            if m in [CoT3, ConvNextBlock]:
+                args.insert(2, n)  # number of repeats
+                n = 1
+        # yolov4, r
+        elif m in [SPPCSP, BottleneckCSP2, DownC, BottleneckCSPF, RepVGGBlockv6, VoVGSCSP, GSConv]:
+            c1, c2 = ch[f], args[0]
+            if c2 != no:  # if not output
+                c2 = make_divisible(c2 * gw, 8)
+
+            args = [c1, c2, *args[1:]]
+            if m in [SPPCSP, BottleneckCSP2, DownC, BottleneckCSPF, VoVGSCSP]:
+                args.insert(2, n)  # number of repeats
+                n = 1
+        elif m in [ReOrg, DWT]:
+            c2 = ch[f] * 4
+        elif m in [S2Attention, SimSPPF, ACmix, CrissCrossAttention, SOCA, ShuffleAttention, SEAttention, SimAM, SKAttention]:
+            c1, c2 = ch[f], args[0]
+            if c2 != no:  # if not output
+                c2 = make_divisible(c2 * gw, 8)
+            args = [c1, *args[1:]]
+        # ---------------(1)---------------
+        elif m is MobileOne:
+            c1, c2 = ch[f], args[0]
+            c2 = make_divisible(c2 * gw, 8)
+            args = [c1, c2, n, *args[1:]]
+        elif m is HorNet:
+            c2 = args[0]
+            args = args[1:]
+        # torchvision
+        elif m in [RegNet1, RegNet2, RegNet3, Efficient1, Efficient2, Efficient3,
+                  MobileNet1, MobileNet2, MobileNet3]:
+            c2 = args[0]
+        # ---------------(2)---------------
+        elif m is space_to_depth:
+            c2 = 4 * ch[f]
+        elif m in [ASFF_Detect, Decoupled_Detect, IDetect, IAuxDetect]:
+            args.append([ch[x] for x in f])
+            if isinstance(args[1], int):  # number of anchors
+                args[1] = [list(range(args[1] * 2))] * len(f)
+        elif m in {DetectX, DetectYoloX}:
+            args.append([ch[x] for x in f])
+        # ---------------(3)---------------
+        elif m in [ConvNeXt, RepLKNet_Stem, RepLKNet_stage1, RepLKNet_stage2, RepLKNet_stage3, RepLKNet_stage4]:
+            c2 = args[0]
+            args = args[1:]
+        elif m is ADD:
+            c2 = sum([ch[x] for x in f]) // 2
+        elif m is Concat_bifpn:
+            c2 = max([ch[x] for x in f])
+        elif m is RepBlock:
+            args.insert(2, n)
+            n = 1
+        # YSY: add module research over-----------------------------
+        # ---------------------------YSY 3---------------------------
         elif m is nn.BatchNorm2d:
             args = [ch[f]]
         elif m is Concat:
