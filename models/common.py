@@ -865,6 +865,7 @@ class MobileOne(nn.Module):
     def forward(self, x):
         x = self.m(x)
         return x
+      
 
 class GhostConv(nn.Module):
     # Ghost Convolution https://github.com/huawei-noah/ghostnet
@@ -895,6 +896,7 @@ class GhostBottleneck(nn.Module):
 
     def forward(self, x):
         return self.conv(x) + self.shortcut(x)
+      
 
 class C3Ghost(C3):
     # C3 module with GhostBottleneck()
@@ -902,6 +904,7 @@ class C3Ghost(C3):
         super().__init__(c1, c2, n, shortcut, g, e)
         c_ = int(c2 * e)  # hidden channels
         self.m = nn.Sequential(*(GhostBottleneck(c_, c_) for _ in range(n)))
+      
 
 #### C2f
 class Bottlenecks(nn.Module):
