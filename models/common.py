@@ -43,6 +43,8 @@ from models.Models.yolov4 import SPPCSP, BottleneckCSP2, Mish
 from models.Models.yolov4 import RepVGGBlockv6, SimSPPF, SimConv, RepBlock
 from models.Models.yolor import ReOrg, DWT, DownC, BottleneckCSPF, ImplicitA, ImplicitM
 from models.Models.Attention.ShuffleAttention import ShuffleAttention
+from models.Models.Attention.GAMAttention import GAMAttention
+from models.Models.Attention.NAMAttention import NAMAttention
 from models.Models.slimneck import GSConv, VoVGSCSP
 
 from models.Models.Lightmodel import CBH, ES_Bottleneck, DWConvblock, ADD, RepVGGBlock, LC_Block, \
