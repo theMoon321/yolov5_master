@@ -16,7 +16,8 @@ from pathlib import Path
 
 # ---------------------------YSY 4---------------------------
 from models.yolox import DetectX, DetectYoloX
-from models.Detect.MultiHead import Decoupled_Detect, ASFF_Detect, IDetect, IAuxDetect
+# YSY0308-add1 next line is already imported in commmon.py
+# from models.Detect.MultiHead import Decoupled_Detect, ASFF_Detect, IDetect, IAuxDetect
 # ---------------------------YSY 4---------------------------
 
 FILE = Path(__file__).resolve()
@@ -159,7 +160,9 @@ class BaseModel(nn.Module):
         # Apply to(), cpu(), cuda(), half() to model tensors that are not parameters or registered buffers
         self = super()._apply(fn)
         m = self.model[-1]  # Detect()
-        if isinstance(m, (Detect, Segment)):
+        # YSY0308-add2
+        if isinstance(m, (Detect, Segment, Decoupled_Detect, ASFF_Detect)):
+        # if isinstance(m, (Detect, Segment)):
             m.stride = fn(m.stride)
             m.grid = list(map(fn, m.grid))
             if isinstance(m.anchor_grid, list):
@@ -202,6 +205,19 @@ class DetectionModel(BaseModel):
             m.anchors /= m.stride.view(-1, 1, 1)
             self.stride = m.stride
             self._initialize_biases()  # only run once
+        # YSY0308-add3
+        if isinstance(m, Decoupled_Detect) or isinstance(m, ASFF_Detect):
+            s = 256  # 2x min stride
+            m.inplace = self.inplace
+            m.stride = torch.tensor([s / x.shape[-2] for x in self.forward(torch.zeros(1, ch, s, s))])  # forward
+            m.anchors /= m.stride.view(-1, 1, 1)
+            check_anchor_order(m)
+            self.stride = m.stride
+            try:
+                self._initialize_biases()  # only run once
+                LOGGER.info('initialize_biases done')
+            except:
+                LOGGER.info('decoupled no biase ')
 
         # Init weights, biases
         initialize_weights(self)
@@ -321,8 +337,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         # ---------------------------YSY 3---------------------------
         # ---YSY: new module added after C3x
-        if m in {
-                Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
+        if m in {Conv, GhostConv, Bottleneck, GhostBottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv,
                 BottleneckCSP, C3, C3TR, C3SPP, C3Ghost, nn.ConvTranspose2d, DWConvTranspose2d, C3x,
                 C3HB, C3RFEM, MultiSEAM, SEAM, C3STR, MobileOneBlock}:
             c1, c2 = ch[f], args[0]
@@ -393,7 +408,8 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         # ---------------(2)---------------
         elif m is space_to_depth:
             c2 = 4 * ch[f]
-        elif m in [ASFF_Detect, Decoupled_Detect, IDetect, IAuxDetect]:
+        # YSY0308-delete4 write what you may use
+        elif m in [ASFF_Detect, Decoupled_Detect]:
             args.append([ch[x] for x in f])
             if isinstance(args[1], int):  # number of anchors
                 args[1] = [list(range(args[1] * 2))] * len(f)
