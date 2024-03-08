@@ -46,6 +46,8 @@ from models.Models.Attention.ShuffleAttention import ShuffleAttention
 from models.Models.Attention.GAMAttention import GAMAttention
 from models.Models.Attention.NAMAttention import NAMAttention
 from models.Models.slimneck import GSConv, VoVGSCSP
+# YSY to use Decoupled_Detect
+from models.Detect.MultiHead import *
 
 from models.Models.Lightmodel import CBH, ES_Bottleneck, DWConvblock, ADD, RepVGGBlock, LC_Block, \
     Dense, conv_bn_relu_maxpool, Shuffle_Block, stem, MBConvBlock, mobilev3_bneck
